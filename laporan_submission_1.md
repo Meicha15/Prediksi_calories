@@ -1,4 +1,4 @@
-# Laporan Proyek Machine Learning - Dwi Sandi Kalla
+# Laporan Proyek Machine Learning - Meicha Salsabila Budiyanti
 
 ## Domain Proyek
 
@@ -99,74 +99,94 @@ Tahap Data Preparation merupakan langkah penting sebelum melakukan proses traini
 7. Pengecekan Outlier dengan Box-plot
    - Pengecekan outlier menggunakan boxplot untuk setiap kolom dilakukan dengan menggunakan
      ```python
-     for column in data.columns:
+     for column in calories.columns:
         plt.figure(figsize=(8, 6))
-        sns.boxplot(x=data[column])
+        sns.boxplot(x=calories[column])
         plt.title(f'Boxplot for {column}')
         plt.show()
      ```
-   - Hasilnya setiap kolom memiliki nilai outlier kecuali kolom Outcome.
+   - Hasilnya setiap kolom memiliki nilai outlier kecuali kolom Gender, Age, dan Duration.
    -  Beberapa kolom/fitur memiliki nilai outlier yang jika tidak ditangani, outlier bisa menyebabkan model belajar pola yang tidak benar (overfitting atau bias).
-   -  > Gambar dapat dilihat di : [Google Collabs - project](https://colab.research.google.com/drive/1XQ_spIaupa-1KupVIS4ozF7IhCmrcStA?usp=sharing)
+   -  > Gambar dapat dilihat di : [Google Collabs - project](https://colab.research.google.com/drive/1YLtZ1iAlsAYZtMj-vUt70D9CUUDr6GcU?usp=sharing)
 
 8. Menangani Outlier (IQR)
    - Penanganan dilakukan dengan metode Interquartile Range (IQR) yang dilakukan memalui kode berikut:
      ```python
-     Q1 = data.quantile(0.25)
-     Q3 = data.quantile(0.75)
-     IQR = Q3 - Q1
+     # Ambil hanya kolom numerikal
+        numeric_cols = calories.select_dtypes(include='number').columns
+     # Hitung Q1, Q3, dan IQR hanya untuk kolom numerikal
+        Q1 = calories[numeric_cols].quantile(0.25)
+        Q3 = calories[numeric_cols].quantile(0.75)
+        IQR = Q3 - Q1
+     # Buat filter untuk menghapus baris yang mengandung outlier di kolom numerikal
+        filter_outliers = ~((calories[numeric_cols] < (Q1 - 1.5 * IQR)) |
+                    (calories[numeric_cols] > (Q3 + 1.5 * IQR))).any(axis=1)
+     # Terapkan filter ke dataset asli (termasuk kolom non-numerikal)
+        calories = calories[filter_outliers]
+     # Cek ukuran dataset setelah outlier dihapus
+        calories.shape
 
-     # Menghapus baris yang mengandung outlier
-     data = data[~((data < (Q1 - 1.5 * IQR)) | (data > (Q3 + 1.5 * IQR))).any(axis=1)]
-     data.info()
+     calories.info()
      ```
-   - Setelah penghapusan outlier jumlah baris yang semula 2768 menjadi 2299 baris.
+   - Setelah penghapusan outlier jumlah baris yang semula 15000 menjadi 14611 baris.
    - Alasan dilakukan penerapan metode IQR adalah karena ingin menghapus outlier agar nantinya tidak berpengaruh ke model.
 
 9. Distribusi Fitur (Histogram)
    - Disitribusi fitur dilakukan melalui pembuatan histogram dengan kode berikut :
      ```python
-     data.hist(bins=50, figsize=(20,15))
+     calories.hist(bins= 50, figsize=(15,10))
      plt.show()
      ```
    - Hasil dari distribusi nya adalah sebagai berikut:
-     * Pregnancies, Age, DiabetesPedigreeFunction, SkinThickness, Insulin: Distribusinya miring ke kanan (right-skewed).
-     * Glucose & BMI: Hampir normal, sedikit miring ke kanan.
-     * BloodPressure: Simetris, mendekati normal.
-     * Outcome: Data biner dan tidak seimbang (lebih banyak kelas 0).
-    - Alasan dilakukannya ini adalah untuk mencari temuan baru terkait data.
+      * Gender: Data biner (0 = perempuan, 1 = laki-laki), dengan sedikit lebih banyak laki-laki.
+      * Age: Miring ke kanan; mayoritas usia 18–30 tahun.
+      * Height: Hampir normal, puncak di 165–185 cm.
+      * Weight: Sedikit miring ke kanan, dominan di 60–80 kg.
+      * Duration: Hampir merata; variasi durasi latihan terdistribusi baik.
+      * Heart_Rate: Mendekati normal, puncak di 95–100 bpm.
+      * Body_Temp: Miring ke kiri; suhu banyak di kisaran 40–41°C.
+      * Calories: Miring ke kanan; sebagian besar di bawah 100 kkal, ekor hingga 300 kkal.
+    - Alasan dilakukannya ini adalah untuk memahami karakteristik data, mendeteksi ketidakseimbangan/skewness, serta menentukan perlunya transformasi atau penyesuaian model.
 
 10. Korelasi Antar Fitur
    - Menggunakan correlation matrix dan pairplot
      ```python
-     # pairplot
-     sns.pairplot(data, diag_kind = 'kde')
-     # correlation matrix
+     #Mengamati hubungan antar fitur numerik dengan fungsi pairplot()
+     sns.pairplot(calories, diag_kind = 'kde')
+     #Untuk mengevaluasi skor korelasinya, gunakan fungsi corr()
      plt.figure(figsize=(10, 8))
-     correlation_matrix = data.corr().round(2)
+     correlation_matrix = calories.corr().round(2)
+     # Untuk menge-print nilai di dalam kotak, gunakan parameter anot=True
      sns.heatmap(data=correlation_matrix, annot=True, cmap='coolwarm', linewidths=0.5, )
-     plt.title("Correlation Matrix", size=20)
+     plt.title("Correlation Matrix untuk Fitur Numerik ", size=20)
      ```
    - Hasil dari correlation matrix adalah
-     * Pregnancies: Korelasi 0.23, arah korelasi positif (semakin banyak kehamilan, sedikit cenderung lebih tinggi risiko diabetes).
-     * Glucose: Korelasi 0.5, arah korelasi positif (semakin tinggi kadar glukosa, semakin tinggi risiko diabetes).
-     * BloodPressure: Korelasi 0.18, arah korelasi positif (semakin tinggi tekanan darah, sedikit cenderung lebih tinggi risiko diabetes).
-     * SkinThickness: Korelasi 0.04, arah korelasi positif (semakin tebal lipatan kulit, sangat sedikit cenderung lebih tinggi risiko diabetes).
-     * Insulin: Korelasi 0.11, arah korelasi positif (semakin tinggi kadar insulin, sedikit cenderung lebih tinggi risiko diabetes).
-     * BMI: Korelasi 0.25, arah korelasi positif (semakin tinggi BMI, sedikit cenderung lebih tinggi risiko diabetes).
-     * DiabetesPedigreeFunction: Korelasi 0.16, arah korelasi positif (semakin tinggi fungsi silsilah diabetes, sedikit cenderung lebih tinggi risiko diabetes).
-     * Age: Korelasi 0.29, arah korelasi positif (semakin bertambah usia, sedikit cenderung lebih tinggi risiko diabetes).
-   - Analisis korelasi digunakan untuk menentukan fitur yang relevan dalam pemodelan, di mana fitur dengan korelasi tinggi terhadap variabel target (seperti Outcome) layak dipertahankan karena berkontribusi signifikan. Selain itu, korelasi juga membantu menghindari multikolinearitas, yaitu kondisi ketika dua fitur memiliki hubungan yang sangat kuat (misalnya antara SkinThickness dan Insulin), yang dapat mengganggu stabilitas model. Meskipun begitu, fitur dengan korelasi rendah bukan berarti tidak penting, karena kombinasi antar fitur tetap dapat meningkatkan performa model secara keseluruhan.
+      * Duration: Korelasi 0.95, arah korelasi positif sangat kuat. Artinya semakin lama durasi latihan, semakin banyak kalori terbakar.
+      * Heart Rate: Korelasi 0.90, arah korelasi positif sangat kuat. Artinya detak jantung lebih tinggi menunjukkan intensitas latihan yang lebih tinggi dan pembakaran kalori lebih besar.
+      * Body Temperature: Korelasi 0.84, arah korelasi positif kuat. Artinya suhu tubuh meningkat saat aktivitas berat, yang sejalan dengan kalori yang terbakar.
+      * Age: Korelasi 0.16, arah korelasi positif lemah. Artinya bertambahnya usia sedikit berkaitan dengan peningkatan kalori terbakar, kemungkinan karena variasi metabolisme.
+      * Weight: Korelasi 0.04, arah korelasi positif sangat lemah. Artinya sedikit korelasi positif, mengindikasikan berat badan bukan faktor utama dalam pembakaran kalori dalam dataset ini.
+      * Height: Korelasi 0.02, arah korelasi positif sangat lemah. Artinya tinggi badan memiliki pengaruh yang sangat kecil terhadap kalori terbakar.
+      * Gender: Korelasi -0.02, arah korelasi negatif sangat lemah. Artinya jenis kelamin hampir tidak berpengaruh langsung terhadap kalori yang terbakar.
+   - Analisis korelasi digunakan untuk mengidentifikasi fitur-fitur yang paling relevan dalam membangun model prediksi kalori terbakar. Dalam kasus ini, fitur dengan korelasi tinggi terhadap variabel target seperti Duration, Heart Rate, dan Body Temperature dianggap sangat penting karena memiliki kontribusi besar terhadap performa model. Di sisi lain, korelasi tinggi antara beberapa fitur seperti Height dan Weight (dengan nilai korelasi sebesar 0.96) menunjukkan adanya multikolinearitas, yaitu kondisi di mana dua fitur sangat saling berkaitan, yang dapat memengaruhi kestabilan model linear seperti regresi linier, namun tidak terlalu berdampak pada model non-linier seperti Random Forest. Sementara itu, fitur dengan korelasi rendah seperti Gender dan Height tetap dipertahankan dalam model karena meskipun kontribusinya kecil secara individu, keberadaannya tetap dapat meningkatkan akurasi prediksi ketika digunakan bersama fitur-fitur lain melalui interaksi kompleks antar variabel.
 
 11. Splitting Data
     - Kode yang diterapkan dalam splitting data adalah sebagai berikut:
       ```python
-      X = data.drop(["Outcome"],axis =1)
-      y = data["Outcome"]
-      X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 42, stratify = y)
+      #Splitting dataset 80:20
+      X = calories.drop('Calories', axis=1)
+      y = calories['Calories']
+      X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, random_state = 42)
+
+      print(f'Total # of sample in whole dataset: {len(X)}')
+      print(f'Total # of sample in train dataset: {len(X_train)}')
+      print(f'Total # of sample in test dataset: {len(X_test)}')
       ```
-    - Data terbagi menjadi 20% untuk `X_test` dan `y_test` serta 80% untuk `X_train` dan `y_train`. Melakukan stratified splitting yaitu dengan `stratify=y`.
+    - Data terbagi menjadi 20% untuk `X_test` dan `y_test` serta 80% untuk `X_train` dan `y_train`.
     - Data train digunakan untuk melatih model, data test digunakan untuk menguji generalisasi model terhadap data baru.
+    - Total # of sample in whole dataset: 14611 (Total keselurahan data pada dataset)
+    - Total # of sample in train dataset: 11688 (Total data uji)
+    - Total # of sample in test dataset: 2923 (Total data test)
 
 12. Standarisasi Data training dan testing
     - Proses standarisasi mengubah data agar memiliki rata-rata 0 dan standar deviasi 1, sehingga setiap fitur berkontribusi secara seimbang. Penting untuk fit hanya pada data training, lalu transformasi yang sama digunakan pada data testing, agar tidak terjadi kebocoran informasi dari data testing ke model (data leakage) dan hasil evaluasi tetap valid.
@@ -186,34 +206,64 @@ Tahap Data Preparation merupakan langkah penting sebelum melakukan proses traini
       ```
 
 ## Modeling
-Proyek ini menggunakan tiga model machine learning, yaitu K-Nearest Neighbors (KNN), Random Forest, Linear Regression. Ketiga model ini dilatih dengan menggunakan data yang telah melalui tahap preprocessing, serta dievaluasi menggunakan metrik Mean Squared Error (MSE). Berikut penjabaran ketiga metode tersebut:
 1. K-Nearest Neighbors (KNN)
-   - Parameter yang digunakan : `n_neighbors = 2`, ini berarti prediksi didasarkan pada rata-rata tetangga terdekat.
-   - Cara Kerja : KNN melakukan prediksi berdasarkan kedekatan data (jarak Euclidean) dengan tetangga terdekatnya di data pelatihan. KNN sangat tergantung pada kualitas dan distribusi data.
-   - Kelebihan : Non-parametrik, sederhana dan mudah dimplementasikan, dan bisa menangkap pola lokal dengan baik.
-   - Kekurangan : Sensitif terhadap pola skala data, Lambat untuk dataset besar karena perhitungan jarak terhadap semua titik data pelatihan, Rentan terhadap noise dan outlier.
+   Parameter yang digunakan: n_neighbors = 2. Cara Kerja: KNN melakukan prediksi berdasarkan rata-rata nilai target dari sejumlah k titik data terdekat dalam ruang fitur. Jarak antar titik biasanya dihitung menggunakan jarak Euclidean.
+   * Kelebihan:
+      - Non-parametrik (tidak mengasumsikan bentuk distribusi data).
+      - Sederhana dan mudah dipahami.
+      - Efektif dalam menangkap pola lokal.
+   * Kekurangan:
+      - Sangat sensitif terhadap skala data dan outlier.
+      - Kurang efisien untuk dataset besar karena perlu menghitung jarak terhadap seluruh data pelatihan.
+      - Tidak cocok untuk data dengan dimensi tinggi tanpa reduksi fitur.
      ```python
      knn = KNeighborsRegressor(n_neighbors=2)
      knn.fit(X_train, y_train)
+     #mse knn
      models.loc['train_mse','knn'] = mean_squared_error(y_pred = knn.predict(X_train), y_true=y_train)
+     #mae knn
+     models.loc['train_mae','knn'] = mean_absolute_error(y_pred = knn.predict(X_train), y_true=y_train)
+     #rmse knn
+     models.loc['train_rmse','knn'] = np.sqrt(mean_squared_error(y_pred = knn.predict(X_train), y_true=y_train))
      ```
 
 2. Random Forest
    - Parameter yang digunakan :
-     * `n_estimators = 200` : jumlah pohon dalam hutan.
-     * `max_depth = 20` : kedalaman maksimum pohon.
-     * `min_samples_split = 2` : jumlah minimum sampel untuk membagi node.
-     * `random_state = 42` : untuk menjaga hasil tetap konsisten.
+     * `n_estimators = 50` : jumlah pohon dalam hutan.
+     * `max_depth = 16` : kedalaman maksimum pohon.
+     * 'n_jobs=-1' gunakan semua core yang tersedia pada CPU.
+     * `random_state = 55` : untuk menjaga hasil tetap konsisten.
    - Cara Kerja : Random Forest membentuk banyak pohon keputusan (decision tree) dan menggabungkan hasilnya (rata-rata untuk regresi) agar lebih stabil dan akurat. Random Forest juga menggunakan subset fitur dan data (bagging) untuk membangun tiap pohon.
    - Kelebihan : Mampu menangkap hubungan non-linier, tidak sensitif terhadap outlier dan multikolinearitas, bias rendah dan akurasi tinggi.
    - Kekurangan : Waktu komputasi bisa tinggi, apalagi jika pohon sangat dalam, lebih sulit diinterpretasi dibanding regresi linear.
      ```python
-     rf = RandomForestRegressor(n_estimators=200, max_depth=20, random_state=42, min_samples_split=2)
-     rf.fit(X_train, y_train)
-     models.loc['train_mse','RandomForest'] = mean_squared_error(y_pred=rf.predict(X_train), y_true=y_train)
+     RF = RandomForestRegressor(n_estimators=50, max_depth=16, random_state=55, n_jobs=-1)
+     RF.fit(X_train, y_train)
+     #mse rf
+     models.loc['train_mse','RandomForest'] = mean_squared_error(y_pred=RF.predict(X_train), y_true=y_train)
+     #mae rf
+     models.loc['train_mae','RandomForest'] = mean_absolute_error(y_pred=RF.predict(X_train), y_true=y_train)
+     #rmse rf
+     models.loc['train_rmse','RandomForest'] = np.sqrt(mean_squared_error(y_pred=RF.predict(X_train), y_true=y_train))
      ```
-
-3. Linear Regression
+3. Algoritma Boosting
+   - Parameter yang digunakan :
+     * 'learning_rate=0.05' : untuk mengontrol seberapa besar kontribusi tiap model kecil (weak learner) dalam proses boosting.
+     * `random_state = 55` : untuk menjaga hasil tetap konsisten.
+   - Cara Kerja : Bekerja dengan melatih model secara berurutan, di mana setiap model baru berfokus untuk memperbaiki kesalahan prediksi dari model sebelumnya dengan memberikan bobot lebih besar pada data yang sulit diprediksi, sehingga menghasilkan prediksi akhir yang lebih akurat melalui kombinasi berbobot dari semua model.
+   - Kelebihan : Mampu meningkatkan akurasi model sederhana menjadi model yang kuat, serta mampu dalam menangani hubungan non-linier secara efektif.
+   - Kekurangan : ensitif terhadap data outlier dan noise karena terus memberi bobot lebih besar pada kesalahan, serta membutuhkan waktu pelatihan yang lebih lama dibanding metode paralel seperti Random Forest karena proses pembelajarannya dilakukan secara berurutan.
+     ```python
+     boosting = AdaBoostRegressor(learning_rate=0.05, random_state=55)
+     boosting.fit(X_train, y_train)
+     #mse bosting
+     models.loc['train_mse','Boosting'] = mean_squared_error(y_pred=boosting.predict(X_train), y_true=y_train)
+     #mae boosting
+     models.loc['train_mae','Boosting'] = mean_absolute_error(y_pred=boosting.predict(X_train), y_true=y_train)
+     #rmse boosting
+     models.loc['train_rmse','Boosting'] = np.sqrt(mean_squared_error(y_pred=boosting.predict(X_train), y_true=y_train))
+     ```
+5. Linear Regression
    - Parameter yang digunakan : `sklearn.linear_model.LinearRegression()`.
    - Cara Kerja : Linear regression mencari garis lurus terbaik yang meminimalkan jumlah kuadrat kesalahan antara prediksi dan nilai sebenarnya. Model ini mengasumsikan hubungan linier antara fitur dan target.
    - Kelebihan : Mudah diinterpretasikan, membutuhkan waktu komputasi yang cepat.
@@ -221,40 +271,67 @@ Proyek ini menggunakan tiga model machine learning, yaitu K-Nearest Neighbors (K
      ```python
      lr = LinearRegression()
      lr.fit(X_train, y_train)
+     #mse linear regression
      models.loc['train_mse','LinearRegression'] = mean_squared_error(y_pred=lr.predict(X_train), y_true=y_train)
+     #mae linear regression
+     models.loc['train_mae','LinearRegression'] = mean_absolute_error(y_pred=lr.predict(X_train), y_true=y_train)
+     #rmse linear regression
+     models.loc['train_rmse','LinearRegression'] = np.sqrt(mean_squared_error(y_pred=lr.predict(X_train), y_true=y_train))
      ```
-Model terbaik yang dipilih adalah Random Forest, karena menghasilkan nilai Mean Squared Error (MSE) terkecil pada data uji, yaitu sebesar 0.000007, dibandingkan dengan model KNN dan Linear Regression. Selain itu, model ini juga menunjukkan performa yang konsisten antara data latih dan data uji, menandakan kemampuan generalisasi yang baik tanpa overfitting. Random Forest juga unggul dalam menangkap hubungan non-linier antar fitur, sehingga lebih efektif dalam menyelesaikan permasalahan regresi pada dataset ini.Hasil algoritma yang terbaik berdasarkan metrik yang diperoleh.
+Model terbaik yang dipilih adalah Random Forest, karena menghasilkan nilai _Mean Squared Error_ (MSE), _Mean Absolute Error_ (MAE), dan RMSE terkecil pada data uji, yaitu sebesar 0.001263, 0.000716, dan 0.001124 dibandingkan dengan model KNN, Linear Regression, dan Algoritma Boosting. Selain itu, model ini juga menunjukkan performa yang konsisten antara data latih dan data uji, menandakan kemampuan generalisasi yang baik tanpa overfitting. Random Forest juga unggul dalam menangkap hubungan non-linier antar fitur, sehingga lebih efektif dalam menyelesaikan permasalahan regresi pada dataset ini.Hasil algoritma yang terbaik berdasarkan metrik yang diperoleh.
 
 ## Evaluation
-Pada proyek ini digunakan metrik Mean Squared Error (MSE). MSE adalah salah satu metrik evaluasi yang paling umum digunakan dalam masalah regresi. Metrik ini bekerja dengan mengukur rata-rata selisih antara nilai aktual dan nilai prediksi dari suatu model. Dengan kata lain, MSE memberitahu bahwa seberapa jauh model dari kenyataan sebenarnya dalam satuan kuadrat. MSE digunakan karena sensitif terhadap error besar, mudah dihitung dan dibedakan antar model, dan konsisten secara matematis. Rumus yang digunakan dalam MSE adalah
 
-$$
-\text{MSE} = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2
-$$
+Dalam proyek ini digunakan tiga metrik evaluasi utama untuk masalah regresi, yaitu **Mean Squared Error (MSE)**, **Mean Absolute Error (MAE)**, dan **Root Mean Squared Error (RMSE)**. Ketiganya mengukur sejauh mana nilai prediksi dari model berbeda dari nilai aktual.
 
-dengan : <br>
-${n}$ : jumlah data<br>
-$y_i$ : nilai aktual<br>
-$\hat{y}_i$ : nilai prediksi<br>
-$(y_i - \hat{y}_i)^2$ : selisih kuadrat antara nilai aktual dan prediksi<br>
+Berikut adalah rumus dari masing-masing metrik:
 
-Dari ketiga model, didapatkan nilai MSE adalah sebagai berikut: 
+- **Mean Squared Error (MSE)**
+    
+  $$MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2$$
 
-| Model | train | test |
-| --- | --- | --- |
-| KNN | 0.000002 | 0.000009 |
-| Random Forest | 0.000002 | 0.000007 |
-| Linear Regression | 0.000144 | 0.000147 |
+- **Mean Absolute Error (MAE)**
+    
+  $$MAE = \frac{1}{n} \sum_{i=1}^{n} \left| y_i - \hat{y}_i \right|$$
 
-Berdasarkan hasil evaluasi menggunakan metrik Mean Squared Error (MSE) pada data train dan test, diperoleh bahwa model Random Forest memiliki performa terbaik dibandingkan model lainnya. Hal ini ditunjukkan oleh nilai MSE yang paling kecil, yaitu 0.000002 pada data train dan 0.000007 pada data test. Artinya, model Random Forest mampu memprediksi target dengan kesalahan yang sangat kecil.
+- **Root Mean Squared Error (RMSE)**
+    
+  $$RMSE = \sqrt{\frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2}$$
 
-Model KNN juga menunjukkan performa yang baik dengan MSE train 0.000002 dan test 0.000009, meskipun sedikit lebih besar dibandingkan Random Forest.
+**Keterangan:** 
+- $$\( y_i \)$$ = nilai aktual  
+- $$\( \hat{y}_i \)$$ = nilai prediksi  
+- $$\( n \)$$ = jumlah data  
 
-Sementara itu, model Linear Regression menunjukkan performa yang paling rendah di antara ketiganya, dengan MSE train 0.000144 dan test 0.000147. Ini menunjukkan bahwa model tersebut tidak mampu menangkap kompleksitas data sebaik dua model lainnya.
+---
+
+# Hasil Evaluasi Model
+
+Tabel berikut menyajikan hasil evaluasi untuk empat model regresi: **KNN**, **Random Forest (RF)**, **Boosting**, dan **Linear Regression** berdasarkan nilai MSE, MAE, dan RMSE pada data train dan test:
+
+| Model               | Train MSE | Test MSE | Train MAE | Test MAE | Train RMSE | Test RMSE |
+|---------------------|-----------|----------|-----------|----------|-------------|------------|
+| **KNN**             | 0.014856  | 0.039048 | 0.002888  | 0.004680 | 0.003854    | 0.006249   |
+| **Random Forest**   | 0.001263  | 0.008322 | 0.001048  | 0.002124 | 0.001542    | 0.002885   |
+| **Boosting**        | 0.197413  | 0.197314 | 0.011034  | 0.011230 | 0.014047    | 0.014035   |
+| **Linear Regression** | 0.125898 | 0.126514 | 0.008526  | 0.008420 | 0.011224    | 0.011248   |
+
+---
+
+# Kesimpulan
+
+Berdasarkan hasil evaluasi:
+
+- **Model Random Forest (RF)** menunjukkan performa terbaik. Hal ini terlihat dari nilai MSE, MAE, dan RMSE yang paling rendah baik pada data training maupun testing, menunjukkan kemampuan model dalam melakukan generalisasi terhadap data baru.
+- **Model KNN** juga memberikan performa yang cukup baik, meskipun sedikit lebih buruk dibanding RF, terutama pada data test.
+- **Model Boosting** dan **Linear Regression** memiliki performa yang relatif rendah. Kedua model menunjukkan error yang cukup besar pada semua metrik evaluasi.
+- Perbedaan besar antara nilai error Linear Regression/Boosting dan Random Forest/KNN menunjukkan bahwa model berbasis ensemble seperti RF jauh lebih mampu menangani kompleksitas data.
+
+---
+
+
 
 
 ## Daftar Referensi
-> [1]World Health Organization, Diabetes, Nov. 14, 2024. [Online]. Available: https://www.who.int/news-room/fact-sheets/detail/diabetes
->
-> [2] I. Contreras and J. Vehi, "Artificial intelligence for diabetes management and decision support: literature review," Journal of Medical Internet Research, vol. 20, no. 5, p. e10775, 2018.doi: e10775.https://www.jmir.org/2018/5/e10775/
+> [1]World Health Organization, Physical activity, June 26, 2024. [Online]. Available: https://www.who.int/news-room/fact-sheets/detail/physical-activity
 
