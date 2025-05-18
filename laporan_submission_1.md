@@ -299,9 +299,9 @@ Berikut adalah rumus dari masing-masing metrik:
   $$RMSE = \sqrt{\frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2}$$
 
 **Keterangan:** 
-- $$\( y_i \)$$ = nilai aktual  
-- $$\( \hat{y}_i \)$$ = nilai prediksi  
-- $$\( n \)$$ = jumlah data  
+- $y_i$ = nilai aktual  
+- $\hat{y}_i$ = nilai prediksi  
+- ${n}$ = jumlah data  
 
 ---
 
